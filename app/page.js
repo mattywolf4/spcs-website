@@ -3,16 +3,31 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 
 const COLS = [
-  { key: "player",         label: "Player",        align: "left"  },
-  { key: "team",           label: "Team",          align: "left"  },
-  { key: "totalSPCS",      label: "Total SPCS",    align: "right" },
-  { key: "avgScore",       label: "Avg Score",     align: "right" },
-  { key: "spcsRating",     label: "SPCS Rating",   align: "right" },
-  { key: "spcsRatingPlus", label: "SPCS Rating+",  align: "right" },
-  { key: "inZonePct",      label: "Zone %",        align: "right" },
-  { key: "hardHitPct",     label: "Hard Hit %",    align: "right" },
-  { key: "hitPct",         label: "Hit %",         align: "right" },
+  { key: "player",         label: "Player",        align: "left",  tip: null },
+  { key: "team",           label: "Team",          align: "left",  tip: null },
+  { key: "totalSPCS",      label: "Total SPCS",    align: "right", tip: "Total number of swings taken in a plus count (3-0, 3-1, or 2-0)" },
+  { key: "avgScore",       label: "Avg Score",     align: "right", tip: "Average SPCS score per swing. Max 10 pts: In Zone +1, Contact +1, BIP +1, Hard Hit +2, Hit +1, each Base +1" },
+  { key: "spcsRating",     label: "SPCS Rating",   align: "right", tip: "Volume x Quality. Total SPCS multiplied by Avg Score divided by 10. Rewards players who swing often AND do damage." },
+  { key: "spcsRatingPlus", label: "SPCS Rating+",  align: "right", tip: "SPCS Rating compared to league average. 100 = league average. 130 means 30% better than average." },
+  { key: "inZonePct",      label: "Zone %",        align: "right", tip: "% of plus count swings taken at pitches in the strike zone. Higher = better pitch selection." },
+  { key: "hardHitPct",     label: "Hard Hit %",    align: "right", tip: "% of balls in play hit at 95+ mph exit velocity (MLB Statcast definition)." },
+  { key: "hitPct",         label: "Hit %",         align: "right", tip: "% of plus count swings that resulted in a base hit." },
 ];
+
+function Tooltip({ text }) {
+  return (
+    <div style={{
+      position: "absolute", top: "calc(100% + 6px)", left: 0,
+      background: "#1e293b", border: "1px solid #334155", borderRadius: 6,
+      padding: "8px 12px", fontSize: 11, color: "#cbd5e1", width: 180, whiteSpace: "normal",
+      lineHeight: 1.5, zIndex: 100, pointerEvents: "none",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+    }}>
+      {text}
+      <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #334155" }} />
+    </div>
+  );
+}
 
 export default function Home() {
   const [data,    setData]    = useState([]);
@@ -21,6 +36,7 @@ export default function Home() {
   const [sortDir, setSortDir] = useState("desc");
   const [search,  setSearch]  = useState("");
   const [minSPCS, setMinSPCS] = useState(5);
+  const [hoveredCol, setHoveredCol] = useState(null);
 
   useEffect(() => {
     fetch("/api/leaderboard")
@@ -61,16 +77,10 @@ export default function Home() {
     <main style={{ minHeight: "100vh", background: "#0a0e1a", color: "#e2e8f0", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ borderBottom: "1px solid #1e2d4a", padding: "24px 40px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#3b82f6", textTransform: "uppercase", marginBottom: 4 }}>
-            MLB Analytics
-          </div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: "#f1f5f9", margin: 0, letterSpacing: "-0.02em" }}>
-            Super Plus Counts
-          </h1>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", color: "#3b82f6", textTransform: "uppercase", marginBottom: 4 }}>MLB Analytics</div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: "#f1f5f9", margin: 0, letterSpacing: "-0.02em" }}>Super Plus Counts</h1>
         </div>
-        <div style={{ fontSize: 12, color: "#64748b" }}>
-          Tracking swings on 3-0 · 3-1 · 2-0 counts
-        </div>
+        <div style={{ fontSize: 12, color: "#64748b" }}>Tracking swings on 3-0 · 3-1 · 2-0 counts</div>
       </div>
       <div style={{ background: "#0f1729", borderBottom: "1px solid #1e2d4a", padding: "12px 40px", display: "flex", gap: 32 }}>
         {[
@@ -111,8 +121,13 @@ export default function Home() {
               <tr style={{ borderBottom: "1px solid #1e2d4a" }}>
                 <th style={{ padding: "10px 12px", color: "#475569", fontSize: 11, fontWeight: 600, textAlign: "left", letterSpacing: "0.05em", textTransform: "uppercase" }}>#</th>
                 {COLS.map((col) => (
-                  <th key={col.key} onClick={() => handleSort(col.key)} style={{ padding: "10px 12px", textAlign: col.align, color: sortKey === col.key ? "#3b82f6" : "#475569", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                  <th key={col.key} onClick={() => handleSort(col.key)}
+                    onMouseEnter={() => col.tip && setHoveredCol(col.key)}
+                    onMouseLeave={() => setHoveredCol(null)}
+                    style={{ padding: "10px 12px", textAlign: col.align, color: sortKey === col.key ? "#3b82f6" : "#475569", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap", position: "relative" }}>
                     {col.label} {sortKey === col.key ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                    {col.tip && <span style={{ marginLeft: 3, color: "#334155", fontSize: 10 }}>?</span>}
+                    {hoveredCol === col.key && col.tip && <Tooltip text={col.tip} />}
                   </th>
                 ))}
               </tr>
