@@ -1,0 +1,28 @@
+name: Daily SPCS Import
+
+on:
+  schedule:
+    - cron: '0 14 * * *'  # Runs at 9am EST every day
+  workflow_dispatch:  # Allows manual trigger from GitHub
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests supabase pybaseball pandas
+
+      - name: Run SPCS importer
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python auto_import.py
