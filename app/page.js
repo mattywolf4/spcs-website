@@ -19,34 +19,77 @@ function Tooltip({ text }) {
     <div style={{
       position: "absolute", top: "calc(100% + 6px)", left: 0,
       background: "#1e293b", border: "1px solid #334155", borderRadius: 6,
-      padding: "8px 12px", fontSize: 11, color: "#cbd5e1", width: 180, whiteSpace: "normal",
-      lineHeight: 1.5, zIndex: 100, pointerEvents: "none",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+      padding: "8px 10px", fontSize: 11, color: "#cbd5e1", width: 180,
+      lineHeight: 1.6, zIndex: 100, pointerEvents: "none",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.4)", whiteSpace: "normal",
     }}>
       {text}
-      <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #334155" }} />
     </div>
   );
 }
 
+function toInputDate(d) {
+  return d.toISOString().split("T")[0];
+}
+
 export default function Home() {
-  const [data,    setData]    = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState("spcsRating");
-  const [sortDir, setSortDir] = useState("desc");
-  const [search,  setSearch]  = useState("");
-  const [minSPCS, setMinSPCS] = useState(5);
+  const [data,       setData]       = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [sortKey,    setSortKey]    = useState("spcsRating");
+  const [sortDir,    setSortDir]    = useState("desc");
+  const [search,     setSearch]     = useState("");
+  const [minSPCS,    setMinSPCS]    = useState(5);
+  const [teamFilter, setTeamFilter] = useState("All");
+  const [fromDate,   setFromDate]   = useState("");
+  const [toDate,     setToDate]     = useState("");
+  const [preset,     setPreset]     = useState("Season");
   const [hoveredCol, setHoveredCol] = useState(null);
 
   useEffect(() => {
-    fetch("/api/leaderboard")
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (fromDate) params.set("from", fromDate);
+    if (toDate)   params.set("to",   toDate);
+    const url = "/api/leaderboard" + (params.toString() ? "?" + params.toString() : "");
+    fetch(url)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); });
-  }, []);
+  }, [fromDate, toDate]);
+
+  const teams = useMemo(() => {
+    const t = [...new Set(data.map((p) => p.team))].sort();
+    return ["All", ...t];
+  }, [data]);
+
+  function applyPreset(p) {
+    setPreset(p);
+    const today = new Date();
+    if (p === "Last 7 days") {
+      const from = new Date(today);
+      from.setDate(from.getDate() - 7);
+      setFromDate(toInputDate(from));
+      setToDate(toInputDate(today));
+    } else if (p === "Last 30 days") {
+      const from = new Date(today);
+      from.setDate(from.getDate() - 30);
+      setFromDate(toInputDate(from));
+      setToDate(toInputDate(today));
+    } else {
+      setFromDate("");
+      setToDate("");
+    }
+  }
+
+  function handleFromDate(v) { setFromDate(v); setPreset("Custom"); }
+  function handleToDate(v)   { setToDate(v);   setPreset("Custom"); }
 
   const sorted = useMemo(() => {
+    const from = fromDate ? new Date(fromDate) : null;
+    const to   = toDate   ? new Date(new Date(toDate).setHours(23,59,59)) : null;
+
     return [...data]
       .filter((p) => p.totalSPCS >= minSPCS)
+      .filter((p) => teamFilter === "All" || p.team === teamFilter)
       .filter((p) => p.player.toLowerCase().includes(search.toLowerCase()) ||
                      p.team.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => {
@@ -54,15 +97,11 @@ export default function Home() {
         const bv = parseFloat(b[sortKey]) || 0;
         return sortDir === "desc" ? bv - av : av - bv;
       });
-  }, [data, sortKey, sortDir, search, minSPCS]);
+  }, [data, sortKey, sortDir, search, minSPCS, teamFilter, fromDate, toDate]);
 
   function handleSort(key) {
-    if (key === sortKey) {
-      setSortDir(sortDir === "desc" ? "asc" : "desc");
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
+    if (key === sortKey) { setSortDir(sortDir === "desc" ? "asc" : "desc"); }
+    else { setSortKey(key); setSortDir("desc"); }
   }
 
   function ratingColor(val) {
@@ -73,6 +112,19 @@ export default function Home() {
     return "#f87171";
   }
 
+  const inputStyle = {
+    background: "#111827", border: "1px solid #1e2d4a", borderRadius: 6,
+    color: "#e2e8f0", padding: "8px 12px", fontSize: 13, outline: "none",
+  };
+
+  const presetBtnStyle = (active) => ({
+    background: active ? "#3b82f6" : "#111827",
+    border: "1px solid " + (active ? "#3b82f6" : "#1e2d4a"),
+    color: active ? "#fff" : "#94a3b8",
+    borderRadius: 5, padding: "5px 12px", fontSize: 12,
+    cursor: "pointer", fontWeight: 600,
+  });
+
   return (
     <main style={{ minHeight: "100vh", background: "#0a0e1a", color: "#e2e8f0", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ borderBottom: "1px solid #1e2d4a", padding: "24px 40px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -82,7 +134,7 @@ export default function Home() {
         </div>
         <div style={{ fontSize: 12, color: "#64748b" }}>Tracking swings on 3-0 · 3-1 · 2-0 counts</div>
       </div>
-      <div style={{ background: "#0f1729", borderBottom: "1px solid #1e2d4a", padding: "12px 40px", display: "flex", gap: 32 }}>
+      <div style={{ background: "#0f1729", borderBottom: "1px solid #1e2d4a", padding: "12px 40px", display: "flex", gap: 32, flexWrap: "wrap" }}>
         {[
           { label: "SPCS", def: "Swing taken in a plus count (3-0, 3-1, or 2-0)" },
           { label: "Avg Score", def: "Average score per swing (max 10 pts)" },
@@ -95,22 +147,32 @@ export default function Home() {
           </div>
         ))}
       </div>
-      <div style={{ padding: "20px 40px", display: "flex", gap: 16, alignItems: "center" }}>
-        <input
-          placeholder="Search player or team..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ background: "#111827", border: "1px solid #1e2d4a", borderRadius: 6, color: "#e2e8f0", padding: "8px 14px", fontSize: 13, width: 240, outline: "none" }}
-        />
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 12, color: "#64748b" }}>Min SPCS</span>
-          {[1, 5, 10, 20].map((n) => (
-            <button key={n} onClick={() => setMinSPCS(n)} style={{ background: minSPCS === n ? "#3b82f6" : "#111827", border: "1px solid " + (minSPCS === n ? "#3b82f6" : "#1e2d4a"), color: minSPCS === n ? "#fff" : "#94a3b8", borderRadius: 5, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-              {n}+
-            </button>
-          ))}
+      <div style={{ padding: "20px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+          <input placeholder="Search player or team..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, width: 240 }} />
+          <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} style={{ ...inputStyle, width: 200, cursor: "pointer" }}>
+            {teams.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "#64748b" }}>Min SPCS</span>
+            {[1, 5, 10, 20].map((n) => (
+              <button key={n} onClick={() => setMinSPCS(n)} style={presetBtnStyle(minSPCS === n)}>{n}+</button>
+            ))}
+          </div>
+          {!loading && <span style={{ fontSize: 12, color: "#475569", marginLeft: "auto" }}>{sorted.length} players</span>}
         </div>
-        {!loading && <span style={{ fontSize: 12, color: "#475569", marginLeft: "auto" }}>{sorted.length} players</span>}
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, color: "#64748b" }}>Date Range</span>
+          {["Season", "Last 7 days", "Last 30 days"].map((p) => (
+            <button key={p} onClick={() => applyPreset(p)} style={presetBtnStyle(preset === p)}>{p}</button>
+          ))}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: "#475569" }}>From</span>
+            <input type="date" value={fromDate} onChange={(e) => handleFromDate(e.target.value)} style={{ ...inputStyle, colorScheme: "dark" }} />
+            <span style={{ fontSize: 12, color: "#475569" }}>To</span>
+            <input type="date" value={toDate} onChange={(e) => handleToDate(e.target.value)} style={{ ...inputStyle, colorScheme: "dark" }} />
+          </div>
+        </div>
       </div>
       <div style={{ padding: "0 40px 60px" }}>
         {loading ? (
