@@ -2,7 +2,7 @@ name: Daily SPCS Import
 
 on:
   schedule:
-    - cron: '0 14 * * *'  # Runs at 9am EST every day
+    - cron: '0 11 * * *'  # Runs at 6am EST every day
   workflow_dispatch:  # Allows manual trigger from GitHub
 
 jobs:
