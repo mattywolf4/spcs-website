@@ -9,7 +9,7 @@ import os
 import re
 from supabase import create_client
 from pybaseball import statcast
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
@@ -140,9 +140,8 @@ def find_spcs(game_data, team_filter, statcast_df, game_pk):
     return results
 
 def main():
-    from datetime import timezone
-est_offset = timedelta(hours=-4)  # EDT (UTC-4)
-yesterday = (datetime.now(timezone.utc) + est_offset - timedelta(days=1)).strftime("%Y-%m-%d")
+           est_offset = timedelta(hours=-4)  # EDT (UTC-4)
+    yesterday = (datetime.now(timezone.utc) + est_offset - timedelta(days=1)).strftime("%Y-%m-%d")
     print(f"Importing SPCS for {yesterday}...")
 
     games = get_schedule(yesterday)
