@@ -140,7 +140,7 @@ def find_spcs(game_data, team_filter, statcast_df, game_pk):
     return results
 
 def main():
-           est_offset = timedelta(hours=-4)  # EDT (UTC-4)
+    est_offset = timedelta(hours=-4)
     yesterday = (datetime.now(timezone.utc) + est_offset - timedelta(days=1)).strftime("%Y-%m-%d")
     print(f"Importing SPCS for {yesterday}...")
 
