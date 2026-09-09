@@ -174,8 +174,14 @@ def main():
             if rows:
                 print(f"  {team}: {len(rows)} SPCS")
 
-    if not all_rows:
+        if not all_rows:
         print("No SPCS found.")
+        return
+
+    # Check if data for this date already exists
+    existing = supabase.table("spcs_swings").select("id").eq("date", all_rows[0]["date"]).execute()
+    if existing.data:
+        print(f"Data for {all_rows[0]['date']} already exists ({len(existing.data)} rows). Skipping.")
         return
 
     supabase.table("spcs_swings").insert(all_rows).execute()
