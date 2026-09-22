@@ -6,10 +6,12 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const from = searchParams.get("from");
     const to   = searchParams.get("to");
+    const gameType = searchParams.get("gameType") || "regular";
 
     const rows = await getSPCSLog();
 
     const filtered = rows.filter((r) => {
+      if (r.gameType !== gameType) return false;
       if (!from && !to) return true;
       const parts = r.date.split("/");
       if (parts.length !== 3) return true;

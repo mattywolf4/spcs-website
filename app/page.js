@@ -44,17 +44,19 @@ export default function Home() {
   const [toDate,     setToDate]     = useState("");
   const [preset,     setPreset]     = useState("Season");
   const [hoveredCol, setHoveredCol] = useState(null);
+  const [gameType, setGameType] = useState("regular");
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (fromDate) params.set("from", fromDate);
     if (toDate)   params.set("to",   toDate);
+    params.set("gameType", gameType);
     const url = "/api/leaderboard" + (params.toString() ? "?" + params.toString() : "");
     fetch(url)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); });
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, gameType]);
 
   const teams = useMemo(() => {
     const t = [...new Set(data.map((p) => p.team))].sort();
@@ -134,6 +136,14 @@ export default function Home() {
         </div>
         <div style={{ fontSize: 12, color: "#64748b" }}>Tracking swings on 3-0 · 3-1 · 2-0 counts</div>
       </div>
+            <div style={{ borderBottom: "1px solid #1e2d4a", display: "flex" }}>
+        {["regular", "playoff"].map((type) => (
+          <button key={type} onClick={() => { setGameType(type); setFromDate(""); setToDate(""); setPreset("Season"); }}
+            style={{ padding: "12px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", borderBottom: gameType === type ? "2px solid #3b82f6" : "2px solid transparent", background: "transparent", color: gameType === type ? "#3b82f6" : "#475569", textTransform: "capitalize", letterSpacing: "0.05em" }}>
+            {type === "regular" ? "Regular Season" : "Playoffs"}
+          </button>
+        ))}
+      </div>
       <div style={{ background: "#0f1729", borderBottom: "1px solid #1e2d4a", padding: "12px 40px", display: "flex", gap: 32, flexWrap: "wrap" }}>
         {[
           { label: "SPCS", def: "Swing taken in a plus count (3-0, 3-1, or 2-0)" },
@@ -146,6 +156,8 @@ export default function Home() {
             <span style={{ fontSize: 11, color: "#475569" }}>— {item.def}</span>
           </div>
         ))}
+      </div>
+      <div style={{ background: "#0f1729", borderBottom: "1px solid #1e2d4a", padding: "12px 40px", display: "flex", gap: 32, flexWrap: "wrap" }}>
       </div>
       <div style={{ padding: "20px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
