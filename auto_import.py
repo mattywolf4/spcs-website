@@ -140,7 +140,7 @@ def find_spcs(game_data, team_filter, statcast_df, game_pk):
     return results
 
 def main():
-    PLAYOFF_START = datetime(2026, 9, 29)
+    PLAYOFF_START = datetime(2026, 9, 29, tzinfo=timezone.utc)
     est_offset = timedelta(hours=-4)
     yesterday = (datetime.now(timezone.utc) + est_offset - timedelta(days=1)).strftime("%Y-%m-%d")
     game_date = datetime.now(timezone.utc) + est_offset - timedelta(days=1)
